@@ -1,9 +1,9 @@
 [package]
 name = "isleep"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Raui Ghazaleh <rj.ghazaleh@gmail.com>"]
-license = "MIT"
+license = "Apache-2.0"
 description = "Intermittent sleeping and return the control flow inbetween"
 homepage = "https://github.com/raui100/iSleep"
 repository = "https://github.com/raui100/iSleep"
