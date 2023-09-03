@@ -1,0 +1,6 @@
+[package]
+name = "isleep"
+version = "0.1.0"
+edition = "2021"
+authors = ["Raui Ghazaleh <rj.ghazaleh@gmail.com>"]
+license = "MIT"
