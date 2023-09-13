@@ -12,7 +12,7 @@
 //! // Starting now
 //! let start = std::time::Instant::now();
 //! // Sleeps for `total` in steps up to `len`
-//! // Will never sleep longer than `total` within accuracy of the platform
+//! // Wont sleep longer than `total` within accuracy of the platform
 //! while isleep::snooze(start, total, len) {
 //!    println!("Checking if the user pressed CTRL+C...");
 //! }
