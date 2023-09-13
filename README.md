@@ -12,15 +12,15 @@ let len = std::time::Duration::from_millis(100);
 // Starting now
 let start = std::time::Instant::now();
 // Sleeps for `total` in steps up to `len`
-// Will never sleep longer than `total` within accuracy of the platform
+// Wont sleep longer than `total` within accuracy of the platform
 while snooze(start, total, len) {
    println!("Checking if the user pressed CTRL+C...");
 }
 ```
 
 # Accuracy
-> cargo add isleep --features=accuracy
-
 The accuracy is platform dependent and might be low for small durations (eg: <20 ms on Windows).
-Higher accuracy can be achieved with the `accuracy` feature and [accurate_snooze](accurate_snooze) which
+Higher accuracy can be achieved with the `accuracy` feature and `accurate_snooze` which
 utilizes [spin_sleep](https://crates.io/crates/spin_sleep).
+
+`cargo add isleep --features=accuracy`
