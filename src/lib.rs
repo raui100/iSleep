@@ -22,7 +22,6 @@
 //! ```
 use std::time::{Duration, Instant};
 
-
 /// Intermittent sleeping for a specified duration since struct instantiation
 pub struct IntermittentSleeping {
     /// Total time that is supposed to be spent sleeping
@@ -78,4 +77,16 @@ fn test_accuracy() {
         counter_2 += 1;
     }
     assert!(counter_1 <= counter_2);
+}
+
+#[rustfmt::skip]
+#[test]
+fn test_readme_example() {
+    let total = std::time::Duration::from_secs(1); // Sleeping for a total of 1 s
+    let len = std::time::Duration::from_millis(100); // Interrupting the sleep after 100 ms
+    let snoozy = IntermittentSleeping::new(total); // `total` start at class initialization
+    // while snoozy.accurate_snooze(len):  // <- higher accuracy with the `accuracy` feature
+    while snoozy.snooze(len) {
+        println!("Checking if the user pressed CTRL+C...");
+    }
 }
