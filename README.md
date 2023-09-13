@@ -1,21 +1,26 @@
-# Intermittent Sleeping
-Sleeps for a while and returns the control flow afterwards.
-Can be used to check for user input (eg: CTRL+C) while sleeping or updating a status bar.
+# isleep
+Provides the functions `snooze` and `accurate_snooze` for intermittent sleeping which return the control flow inbetween.  
 
+Relies on platform support for `std::time` and `std::thread`.
+
+# Example
 ```rust
-let total = std::time::Duration::from_secs(1);  // Sleeping for a total of 1 s
-let len = std::time::Duration::from_millis(100);  // Interrupting the sleep after 100 ms
-let snoozy = isleep::IntermittentSleeping::new(total);  // `total` start at class initialization
-// while snoozy.accurate_snooze(len):  // <- higher accuracy with the `accuracy` feature
-while snoozy.snooze(len) {
-    println!("Checking if the user pressed CTRL+C...");
+// Sleeping for a total of 1 s
+let total = std::time::Duration::from_secs(1);
+// Interrupting the sleep after 100 ms
+let len = std::time::Duration::from_millis(100);
+// Starting now
+let start = std::time::Instant::now();
+// Sleeps for `total` in steps up to `len`
+// Will never sleep longer than `total` within accuracy of the platform
+while snooze(start, total, len) {
+   println!("Checking if the user pressed CTRL+C...");
 }
 ```
 
-## Accuracy
+# Accuracy
 > cargo add isleep --features=accuracy
 
-The accuracy of sleep duration is depending on the operating system. 
-Sleeping for less than 15 ms won't work reliably (eg: on Windows).  
-For more accurate sleeping the `accuracy` feature and the `accurate_snooze` function can be used.  
-This relies on the [spin-sleep](https://github.com/alexheretic/spin-sleep) crate for improved accuracy.
+The accuracy is platform dependent and might be low for small durations (eg: <20 ms on Windows).
+Higher accuracy can be achieved with the `accuracy` feature and [accurate_snooze](accurate_snooze) which
+utilizes [spin_sleep](https://crates.io/crates/spin_sleep).

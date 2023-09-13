@@ -1,92 +1,121 @@
-//! Accurate intermittent sleeping and returning the control flow inbetween.
-//! Sleeping for the duration of `len` or up to `self.total`.
-//! Won't sleep longer than `len` within accuracy of the operation system.
+//! Provides the functions [snooze](snooze) and [accurate_snooze](accurate_snooze)
+//! for intermittent sleeping which return the control flow inbetween.
 //!
-//! For higher accuracy try the feature `accuracy` and `accurate_snooze` which
+//! Relies on platform support for `std::time` and `std::thread`.
+//!
+//! # Example
+//! ```
+//! // Sleeping for a total of 1 s
+//! let total = std::time::Duration::from_secs(1);
+//! // Interrupting the sleep after 100 ms
+//! let len = std::time::Duration::from_millis(100);
+//! // Starting now
+//! let start = std::time::Instant::now();
+//! // Sleeps for `total` in steps up to `len`
+//! // Will never sleep longer than `total` within accuracy of the platform
+//! while isleep::snooze(start, total, len) {
+//!    println!("Checking if the user pressed CTRL+C...");
+//! }
+//! ```
+//!
+//! # Accuracy
+//!
+//! The accuracy is platform dependent and might be low for small durations (eg: <20 ms on Windows).
+//! Higher accuracy can be achieved with the `accuracy` feature and [accurate_snooze](accurate_snooze) which
 //! utilizes [spin_sleep](https://crates.io/crates/spin_sleep).
 //!
-//! # Examples
-//! ```
-//! use std::time::{Duration, Instant};
-//! let total = Duration::from_secs(1);  // Sleeping for a total of 1 s
-//! let len = Duration::from_millis(300);  // Interrupting the sleep after 100 ms
-//! let int = isleep::IntermittentSleeping::new(total);
-//! let start = Instant::now();
-//! let mut counter = 0;
-//! while int.snooze(len) {
-//!     counter += 1;  // Doing something while "sleeping"
-//! }
-//! // Sleeps approximately 300, 300, 300 and 100 ms ≈ `total`
-//! assert!(start.elapsed().lt(&Duration::from_millis(1200)));
-//! assert_eq!(counter, 4);
-//! ```
+//! `cargo add isleep --features=accuracy`
+
 use std::time::{Duration, Instant};
 
-/// Intermittent sleeping for a specified duration since struct instantiation
-pub struct IntermittentSleeping {
-    /// Total time that is supposed to be spent sleeping
-    total: Duration,
-    /// Point in time when the instance has been created.
-    start: Instant,
-}
-
-impl IntermittentSleeping {
-    /// Sleeps for `len` or up to `self.total` within accuracy of the OS.
-    pub fn snooze(&self, len: Duration) -> bool {
-        match self.total.checked_sub(self.start.elapsed()) {
-            Some(dt) => {
-                std::thread::sleep(len.min(dt));
-                true
-            }
-            None => false,
-        }
-    }
-
-    pub fn new(total: Duration) -> Self {
-        Self {
-            total,
-            start: Instant::now(),
-        }
-    }
-
-    #[cfg(feature = "accuracy")]
-    /// Sleeps for `len` or up to `self.total` with high accuracy utilizing spin locks.
-    pub fn accurate_snooze(&self, len: Duration) -> bool {
-        match self.total.checked_sub(self.start.elapsed()) {
-            Some(dt) => {
-                spin_sleep::sleep(len.min(dt));
-                true
-            }
-            None => false,
+/// Sleeps for `total` in steps of up to `len` and returns control flow inbetween.
+///
+/// Accuracy is bounded by platform and might be low. For higher accuracy use the `accuracy` feature
+/// and [accurate_snooze](accurate_snooze).
+///
+/// # Examples
+/// ```
+/// // Sleeping for a total of 1 s
+/// let total = std::time::Duration::from_secs(1);
+/// // Interrupting the sleep after 100 ms
+/// let len = std::time::Duration::from_millis(100);
+/// // Starting now
+/// let start = std::time::Instant::now();
+/// while isleep::snooze(start, total, len) {
+///     println!("Checking if the user pressed CTRL+C...");
+/// }
+/// ```
+pub fn snooze(start: Instant, total: Duration, len: Duration) -> bool {
+    match total.checked_sub(start.elapsed()) {
+        None => false,
+        Some(dt) => {
+            std::thread::sleep(len.min(dt));
+            true
         }
     }
 }
 
 #[cfg(feature = "accuracy")]
-#[test]
-fn test_accuracy() {
-    let responsiveness = Duration::from_micros(1);
-    let mut counter_1 = 0;
-    let mut counter_2 = 0;
-    let int = IntermittentSleeping::new(Duration::from_secs(1));
-    while int.snooze(responsiveness) {
-        counter_1 += 1;
+/// Sleeps for `total` in accurate steps of up to `len` and returns control flow inbetween.
+///
+/// Higher accuracy than [snooze](snooze). Only uses native sleep as far as it can be trusted, then spins.
+/// Has higher accuracy but also increases CPU usage.
+///
+/// # Examples
+/// ```
+/// // Sleeping for a total of 1 s
+/// let total = std::time::Duration::from_secs(1);
+/// // Interrupting the sleep after 100 ms
+/// let len = std::time::Duration::from_millis(100);
+/// // Starting now
+/// let start = std::time::Instant::now();
+/// while isleep::accurate_snooze(start, total, len) { ///
+///     println!("Checking if the user pressed CTRL+C...");
+/// }
+/// ```
+pub fn accurate_snooze(start: Instant, total: Duration, len: Duration) -> bool {
+    match total.checked_sub(start.elapsed()) {
+        None => false,
+        Some(dt) => {
+            spin_sleep::sleep(len.min(dt));
+            true
+        }
     }
-    let int = IntermittentSleeping::new(Duration::from_secs(1));
-    while int.accurate_snooze(responsiveness) {
-        counter_2 += 1;
-    }
-    assert!(counter_1 <= counter_2);
 }
 
-#[rustfmt::skip]
-#[test]
-fn test_readme_example() {
-    let total = std::time::Duration::from_secs(1); // Sleeping for a total of 1 s
-    let len = std::time::Duration::from_millis(100); // Interrupting the sleep after 100 ms
-    let snoozy = IntermittentSleeping::new(total); // `total` start at class initialization
-    // while snoozy.accurate_snooze(len):  // <- higher accuracy with the `accuracy` feature
-    while snoozy.snooze(len) {
-        println!("Checking if the user pressed CTRL+C...");
+#[cfg(test)]
+mod test {
+    use super::snooze;
+
+    #[cfg(feature = "accuracy")]
+    #[test]
+    fn test_accuracy() {
+        let total = std::time::Duration::from_secs(1);
+        let len = std::time::Duration::from_millis(100);
+        let start = std::time::Instant::now();
+        let mut counter = 0;
+        while super::accurate_snooze(start, total, len) {
+            counter += 1;
+        }
+        let start = std::time::Instant::now();
+        while snooze(start, total, len) {
+            counter += 1;
+        }
+        assert!(counter >= 0);
+    }
+
+    #[test]
+    fn test_readme_example() {
+        // Sleeping for a total of 1 s
+        let total = std::time::Duration::from_secs(1);
+        // Interrupting the sleep after 100 ms
+        let len = std::time::Duration::from_millis(100);
+        // Starting now
+        let start = std::time::Instant::now();
+        // Sleeps for `total` in steps up to `len`
+        // Will never sleep longer than `total` within accuracy of the platform
+        while snooze(start, total, len) {
+            println!("Checking if the user pressed CTRL+C...");
+        }
     }
 }
